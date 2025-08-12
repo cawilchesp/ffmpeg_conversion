@@ -1,4 +1,4 @@
-from modules.capture import VideoInfo
+from modules.ffmpeg_processing import VideoInfo
 
 from rich import print, box
 from rich.table import Table, Column
@@ -10,7 +10,7 @@ def step_message(step: str = None, message: str = None) -> None:
         step (str): The step number or identifier.
         message (str): The message to display.
     """
-    print(f"\n[green]\[{step}][/green] {message}")
+    print(f"\n[green][{step}][/green] {message}")
 
 def source_message(video_info: VideoInfo) -> None:
     """Display video source information in a formatted table.
