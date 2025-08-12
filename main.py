@@ -4,22 +4,38 @@ import itertools
 import subprocess
 from pathlib import Path
 
+# Local modules
+from modules.process_config import ProcessConfig, create_config
+
+# Local tools
 import tools.messages as messages
 
 
 # For debugging
 from icecream import ic
 
-def main(
-    source: str,
-    ffmpeg_path: str,
-    bitrate: str,
-    resolution: str,
-    fps: str,
-    crop_detect: bool
-) -> None:
-    # Inicializar contador de etapas del proceso de detección y seguimientos
+
+def parse_arguments() -> argparse.Namespace:
+    """Parse command-line arguments for the video conversion tool using FFMPEG.
+    Returns:
+        argparse.Namespace: Parsed arguments.
+    """
+    parser = argparse.ArgumentParser(description="Video conversion tool using FFMPEG")
+    parser.add_argument('--source', type=str, required=True, help='video source')
+    parser.add_argument('--ffmpeg', type=str, default='bin/ffmpeg.exe', help='ffmpeg path')
+    parser.add_argument('--bitrate', type=str, nargs='?', const='3', default=False, help='bitrate in Mbps')
+    parser.add_argument('--resolution', type=str, nargs='?', const='1920:1080', default=False, help='video resolution')
+    parser.add_argument('--fps', type=str, nargs='?', const='30', default=False, help='video fps')
+    parser.add_argument('--crop-detect', action='store_true', help='detect crop area')
+
+    return parser.parse_args()
+
+
+def main(config: ProcessConfig) -> None:
+    # Initialize process counter
     step_count = itertools.count(1)
+
+    ffmpeg_path = Path("bin/ffmpeg.exe")
 
     output_path = f"{Path(source).parent}/{Path(source).stem}_FFMPEG_EDITED.mp4"
 
@@ -80,24 +96,7 @@ def main(
     
 
 if __name__ == "__main__":
-    # Inicializar argumentos de entrada
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--source', type=str, required=True, help='video source')
-    parser.add_argument('--ffmpeg', type=str, default='bin/ffmpeg.exe', help='ffmpeg path')
-    parser.add_argument('--bitrate', type=str, nargs='?', const='3', default=False, help='bitrate in Mbps')
-    parser.add_argument('--resolution', type=str, nargs='?', const='1920:1080', default=False, help='video resolution')
-    parser.add_argument('--fps', type=str, nargs='?', const='30', default=False, help='video fps')
-    parser.add_argument('--crop-detect', action='store_true', help='detect crop area')
-    option = parser.parse_args()
+    options = parse_arguments()
+    config = create_config(options)
 
-    # Carpeta raíz del proyecto
-    root_path = Path(__file__).resolve().parent
-
-    main(
-        source=option.source,
-        ffmpeg_path=option.ffmpeg,
-        bitrate=option.bitrate,
-        resolution=option.resolution,
-        fps=option.fps,
-        crop_detect=option.crop_detect
-    )
+    main(config)
