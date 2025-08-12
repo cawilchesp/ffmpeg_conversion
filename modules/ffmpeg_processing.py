@@ -13,7 +13,7 @@ class VideoInfo:
         fps (str): The frames per second of the video.
         total_frames (str): The total number of frames in the video.
     """
-    source: str
+    source_name: str
     width: str
     height: str
     fps: str
@@ -47,7 +47,7 @@ def load_video_info(ffmpeg_path: Path, source: str) -> VideoInfo:
                 info[key.strip()] = value.strip()
         
         return VideoInfo(
-            source=source,
+            source_name=Path(source).stem,
             width=info.get('width', 'N/A'),
             height=info.get('height', 'N/A'),
             fps=eval(info.get('r_frame_rate', '0/1')),
@@ -55,3 +55,36 @@ def load_video_info(ffmpeg_path: Path, source: str) -> VideoInfo:
         )
     except Exception as e:
         raise IOError('Failed to get video info ❌')
+
+
+def process_video(self):
+    
+        
+    input_path = self.file_path.text()
+    if not input_path:
+        QMessageBox.warning(self, "Warning", "Please select a video file first")
+        return
+
+    # Build output path
+    output_path = Path(input_path).with_stem(f"{Path(input_path).stem}_processed")
+    
+    # Build FFmpeg command
+    bitrate = f"{self.bitrate_input.value()}{self.bitrate_unit.currentText()[0]}"
+    cmd = [
+        str(self.ffmpeg_path),
+        "-hwaccel", "cuda",
+        "-i", input_path,
+        "-vf", f"scale={self.width_input.value()}:{self.height_input.value()}",
+        "-c:v", "h264_nvenc",
+        "-b:v", bitrate,
+        "-r", str(self.fps_input.value()),
+        "-c:a", "copy",
+        "-y", str(output_path)+".mp4"
+    ]
+
+    try:
+        subprocess.run(cmd, check=True)
+        QMessageBox.information(self, "Success", 
+            f"Video processed successfully!\nSaved to: {output_path}")
+    except subprocess.CalledProcessError as e:
+        QMessageBox.critical(self, "Error", f"Processing failed: {str(e)}")
