@@ -5,7 +5,11 @@ from rich.live import Live
 
 # Local modules
 from modules.process_config import ProcessConfig, create_config
-from modules.ffmpeg_processing import load_video_info, process_video, monitor_process, monitor_table
+from modules.ffmpeg_processing import (load_video_info,
+                                        process_video,
+                                        monitor_process,
+                                        crop_detect,
+                                        crop_result)
 
 # Local tools
 from tools.messages import step_message, source_message, progress_table
@@ -35,7 +39,7 @@ def main(config: ProcessConfig) -> None:
     # Initialize process counter
     step_count = itertools.count(1)
 
-    ffmpeg_path = Path("bin/ffmpeg.exe")
+    ffmpeg_path = Path("ffmpeg/bin/ffmpeg.exe")
 
     if not ffmpeg_path.exists():
         raise IOError("FFmpeg not found in specified path ❌")
@@ -52,12 +56,9 @@ def main(config: ProcessConfig) -> None:
 
 
     if config.crop_detect:
-        ffmpeg_command = [
-            ffmpeg_path,
-            "-i", source,
-            "-vf", "cropdetect",
-            "-an", "-t", "10", "-f", "null","-"
-        ]
+        process = crop_detect(ffmpeg_path=ffmpeg_path, config=config)
+        crop_result(process)
+
         # Ejecutar el comando
         step_message(next(step_count), 'Detección de Área de Cortado Iniciado ✅')
     else:
