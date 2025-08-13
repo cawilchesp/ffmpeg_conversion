@@ -2,6 +2,9 @@ import subprocess
 from pathlib import Path
 from dataclasses import dataclass
 
+# Local modules
+from modules.process_config import ProcessConfig
+
 
 @dataclass
 class VideoInfo:
@@ -57,34 +60,39 @@ def load_video_info(ffmpeg_path: Path, source: str) -> VideoInfo:
         raise IOError('Failed to get video info ❌')
 
 
-def process_video(self):
-    
-        
-    input_path = self.file_path.text()
-    if not input_path:
-        QMessageBox.warning(self, "Warning", "Please select a video file first")
-        return
-
+def process_video(ffmpeg_path: Path, config: ProcessConfig) -> None:
     # Build output path
-    output_path = Path(input_path).with_stem(f"{Path(input_path).stem}_processed")
+    output_path = Path(config.source).with_stem(f"{Path(config.source).stem}_FFMPEG_EDITED.mp4")
     
     # Build FFmpeg command
-    bitrate = f"{self.bitrate_input.value()}{self.bitrate_unit.currentText()[0]}"
     cmd = [
-        str(self.ffmpeg_path),
+        str(ffmpeg_path),
         "-hwaccel", "cuda",
-        "-i", input_path,
-        "-vf", f"scale={self.width_input.value()}:{self.height_input.value()}",
-        "-c:v", "h264_nvenc",
-        "-b:v", bitrate,
-        "-r", str(self.fps_input.value()),
-        "-c:a", "copy",
-        "-y", str(output_path)+".mp4"
+        "-an",
+        "-i", config.source,
+        "-c:v", "h264_nvenc"
     ]
+    
+    # Check bitrate
+    if config.bitrate:
+        cmd.append("-b:v")
+        cmd.append(f"{config.bitrate}M")
 
-    try:
-        subprocess.run(cmd, check=True)
-        QMessageBox.information(self, "Success", 
-            f"Video processed successfully!\nSaved to: {output_path}")
-    except subprocess.CalledProcessError as e:
-        QMessageBox.critical(self, "Error", f"Processing failed: {str(e)}")
+    # Check resolution
+    if config.resolution:
+        cmd.append("-vf")
+        cmd.append(f"scale={config.resolution}")
+
+    # Check FPS
+    if config.fps:
+        cmd.append("-r")
+        cmd.append(f"{config.fps}")
+
+    cmd.append("-y")
+    cmd.append(f"{output_path}")
+    
+    result = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    
+    print(result)
+    # for line in result.stdout:
+    #     print("Progress:", line.strip())
