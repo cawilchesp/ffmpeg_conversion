@@ -1,12 +1,11 @@
-import os
 import argparse
 import itertools
-import subprocess
 from pathlib import Path
+from rich.live import Live
 
 # Local modules
 from modules.process_config import ProcessConfig, create_config
-from modules.ffmpeg_processing import load_video_info, process_video
+from modules.ffmpeg_processing import load_video_info, process_video, monitor_process, monitor_table
 
 # Local tools
 from tools.messages import step_message, source_message, progress_table
@@ -63,12 +62,18 @@ def main(config: ProcessConfig) -> None:
         step_message(next(step_count), 'Detección de Área de Cortado Iniciado ✅')
     else:
         step_message(next(step_count), 'Conversion Started ✅')
-        try:
-            process_video(ffmpeg_path=ffmpeg_path, config=config)
+        
+        process = process_video(ffmpeg_path=ffmpeg_path, config=config)
+        monitor_process(process)
+        
+        # Wait for process to finish
+        process.wait()
+
+        # Final message
+        if process.returncode == 0:
             step_message(next(step_count), 'Video processed successfully! ✅')
-        except subprocess.CalledProcessError as e:
-            step_message(next(step_count), f"Error processing video: {str(e)} ❌")
-            return
+        else:
+            step_message(next(step_count), "Error processing video: ❌")
     
 
 if __name__ == "__main__":
