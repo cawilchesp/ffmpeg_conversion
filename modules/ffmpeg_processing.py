@@ -1,6 +1,10 @@
+import re
 import subprocess
 from pathlib import Path
 from dataclasses import dataclass
+from rich.live import Live
+from rich import print, box
+from rich.table import Table, Column
 
 # Local modules
 from modules.process_config import ProcessConfig
@@ -57,10 +61,10 @@ def load_video_info(ffmpeg_path: Path, source: str) -> VideoInfo:
             total_frames=info.get('nb_frames', 'N/A')
         )
     except Exception as e:
-        raise IOError('Failed to get video info ❌')
+        raise IOError(f'❌ Failed to get video info: {str(e)} ')
 
 
-def process_video(ffmpeg_path: Path, config: ProcessConfig) -> None:
+def process_video(ffmpeg_path: Path, config: ProcessConfig) -> subprocess.Popen:
     # Build output path
     output_path = Path(config.source).with_stem(f"{Path(config.source).stem}_FFMPEG_EDITED.mp4")
     
@@ -72,27 +76,63 @@ def process_video(ffmpeg_path: Path, config: ProcessConfig) -> None:
         "-i", config.source,
         "-c:v", "h264_nvenc"
     ]
-    
-    # Check bitrate
-    if config.bitrate:
-        cmd.append("-b:v")
-        cmd.append(f"{config.bitrate}M")
 
-    # Check resolution
-    if config.resolution:
-        cmd.append("-vf")
-        cmd.append(f"scale={config.resolution}")
+    # Video encoding options
+    options = {
+        "bitrate": ["-b:v", f"{config.bitrate}M"],
+        "resolution": ["-vf", f"scale={config.resolution}"],
+        "fps": ["-r", f"{config.fps}"]
+    }
 
-    # Check FPS
-    if config.fps:
-        cmd.append("-r")
-        cmd.append(f"{config.fps}")
+    for key, args in options.items():
+        if getattr(config, key):
+            cmd.extend(args)
 
-    cmd.append("-y")
-    cmd.append(f"{output_path}")
+    cmd.extend(["-y", f"{output_path}"])
     
-    result = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    # Launch process
+    process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
     
-    print(result)
-    # for line in result.stdout:
-    #     print("Progress:", line.strip())
+    return process
+
+def monitor_process(process: subprocess.Popen) -> tuple[str, str, str, str]:
+    """ Monitor the FFmpeg process and display progress."""
+    progress_pattern = re.compile(r"frame=\s*(\d+).*?fps=\s*([\d\.]+).*?time=\s*(\d+:\d+:\d+\.\d+).*?speed=\s*([\d\.]+)x")
+
+    with Live(monitor_table("0","0.0","-","0.0"), refresh_per_second=4) as live:
+        while True:
+            line = process.stderr.readline()
+            if not line:
+                break
+            line = line.strip()
+
+            # Show errors
+            if "Error" in line or "Invalid" in line or "failed" in line.lower():
+                print(f"[bold red]Error:[/bold red] {line}")
+
+            # Match progress line
+            match = progress_pattern.search(line)
+            if match:
+                frame, fps, timestamp, speed = match.groups()
+                live.update(monitor_table(frame, fps, timestamp, speed))
+
+def monitor_table(frame: str, fps: str, timestamp: str, speed: str) -> Table:
+    """Display video source information in a formatted table.
+    Args:
+        video_info (VideoInfo): Information about the video source.
+    """
+    table = Table(
+        Column("Frame", justify="left", style="white", no_wrap=True),
+        Column("Frame Rate", justify="left", style="white", no_wrap=True),
+        Column("Video Time", justify="left", style="white", no_wrap=True),
+        Column("Speed", justify="left", style="white", no_wrap=True),
+        title="Processing",
+        box=box.HORIZONTALS )
+
+    table.add_row(
+        f"{frame}",
+        f"{fps} FPS",
+        f"{timestamp}",
+        f"{speed}x")
+        
+    return table
