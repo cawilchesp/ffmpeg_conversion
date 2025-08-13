@@ -6,9 +6,10 @@ from pathlib import Path
 
 # Local modules
 from modules.process_config import ProcessConfig, create_config
+from modules.ffmpeg_processing import load_video_info, process_video
 
 # Local tools
-import tools.messages as messages
+from tools.messages import step_message, source_message, progress_table
 
 
 # For debugging
@@ -37,10 +38,21 @@ def main(config: ProcessConfig) -> None:
 
     ffmpeg_path = Path("bin/ffmpeg.exe")
 
-    output_path = f"{Path(source).parent}/{Path(source).stem}_FFMPEG_EDITED.mp4"
+    if not ffmpeg_path.exists():
+        raise IOError("FFmpeg not found in specified path ❌")
+        
+    step_message(str(next(step_count)), "FFMPEG Initialized :white_check_mark:")
+
+    # Get video information
+    video_info = load_video_info(
+        ffmpeg_path=ffmpeg_path,
+        source=config.source )
+    
+    step_message(str(next(step_count)), "Video Source :white_check_mark:")
+    source_message(video_info=video_info)
 
 
-    if crop_detect:
+    if config.crop_detect:
         ffmpeg_command = [
             ffmpeg_path,
             "-i", source,
@@ -48,51 +60,15 @@ def main(config: ProcessConfig) -> None:
             "-an", "-t", "10", "-f", "null","-"
         ]
         # Ejecutar el comando
-        messages.step_message(next(step_count), 'Detección de Área de Cortado Iniciado ✅')
+        step_message(next(step_count), 'Detección de Área de Cortado Iniciado ✅')
     else:
-
-    # ffmpeg -hwaccel cuda -i "D:\INTEIA\Proyectos\Aforos_Medellin\2_Popular\videos\2_3_PM_Crr39_89a_20241106_162201.mp4" -vf "crop=960:720:160:0" -c:v h264_nvenc -c:a copy "D:\INTEIA\Proyectos\Aforos_Medellin\2_Popular\videos\2_3_PM_Crr39_89a_20241106_162201__cropped.mp4"
-
-
-    # ffmpeg -hwaccel cuda -i "D:\INTEIA\Proyectos\Aforos_Medellin\2_Popular\videos\2_14_PM_Crr45a_Cl93_20241102_154808.mp4" -vf "crop=1440:1080:240:0" -c:v h264_nvenc -c:a copy -b:v 3M "D:\INTEIA\Proyectos\Aforos_Medellin\2_Popular\videos\2_14_PM_Crr45a_Cl93_20241102_154808__cropped.mp4"
-
-        ffmpeg_command = [
-            ffmpeg_path, "-y",
-            "-vsync", "cfr",
-            "-hwaccel", "cuda", "-i", source,
-            "-an",
-            "-c:v", "h264_nvenc"
-        ]
-        # ic(ffmpeg_command)
-        # quit()
-
-        if bitrate:
-            ffmpeg_command.append("-b:v")
-            ffmpeg_command.append(f"{bitrate}M")
-
-        if resolution:
-            ffmpeg_command.append("-vf")
-            ffmpeg_command.append(f"scale_cuda={resolution}")
-
-        if fps:
-            ffmpeg_command.append("-r")
-            ffmpeg_command.append(f"{fps}")
-
-        ffmpeg_command.append(output_path)
-    
-        # Ejecutar el comando
-        messages.step_message(next(step_count), 'Proceso de Conversión Iniciado ✅')
-    
-
-
-    
-    try:
-        subprocess.run(ffmpeg_command, check=True)
-        messages.step_message(next(step_count), f"Procesado exitosamente: {Path(source).stem} ✅")
-    except subprocess.CalledProcessError as e:
-        messages.step_message(next(step_count), f"Error al procesar {Path(source).stem}: {e}")
-
-    messages.step_message(next(step_count), 'Proceso de Conversión Finalizado ✅')
+        step_message(next(step_count), 'Conversion Started ✅')
+        try:
+            process_video(ffmpeg_path=ffmpeg_path, config=config)
+            step_message(next(step_count), 'Video processed successfully! ✅')
+        except subprocess.CalledProcessError as e:
+            step_message(next(step_count), f"Error processing video: {str(e)} ❌")
+            return
     
 
 if __name__ == "__main__":
