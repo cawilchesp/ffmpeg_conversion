@@ -57,7 +57,11 @@ def main(config: ProcessConfig) -> None:
 
     if config.crop_detect:
         process = crop_detect(ffmpeg_path=ffmpeg_path, config=config)
-        crop_result(process)
+        width, height, x, y = crop_result(process)
+
+        if x == '0' and y == '0':
+            step_message(next(step_count), 'Crop area not detected ❌')
+            return
 
         # Ejecutar el comando
         step_message(next(step_count), 'Detección de Área de Cortado Iniciado ✅')
