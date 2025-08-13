@@ -72,6 +72,7 @@ def process_video(ffmpeg_path: Path, config: ProcessConfig) -> subprocess.Popen:
     cmd = [
         str(ffmpeg_path),
         "-hwaccel", "cuda",
+        "-y",
         "-an",
         "-i", config.source,
         "-c:v", "h264_nvenc"
@@ -88,12 +89,13 @@ def process_video(ffmpeg_path: Path, config: ProcessConfig) -> subprocess.Popen:
         if getattr(config, key):
             cmd.extend(args)
 
-    cmd.extend(["-y", f"{output_path}"])
+    cmd.append(f"{output_path}")
     
     # Launch process
     process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
     
     return process
+
 
 def monitor_process(process: subprocess.Popen) -> tuple[str, str, str, str]:
     """ Monitor the FFmpeg process and display progress."""
@@ -116,6 +118,7 @@ def monitor_process(process: subprocess.Popen) -> tuple[str, str, str, str]:
                 frame, fps, timestamp, speed = match.groups()
                 live.update(monitor_table(frame, fps, timestamp, speed))
 
+
 def monitor_table(frame: str, fps: str, timestamp: str, speed: str) -> Table:
     """Display video source information in a formatted table.
     Args:
@@ -136,3 +139,43 @@ def monitor_table(frame: str, fps: str, timestamp: str, speed: str) -> Table:
         f"{speed}x")
         
     return table
+
+
+def crop_video(ffmpeg_path: Path, config: ProcessConfig) -> subprocess.Popen:
+    # Build output path
+    output_path = Path(config.source).with_stem(f"{Path(config.source).stem}_FFMPEG_EDITED.mp4")
+    return None
+
+
+def crop_detect(ffmpeg_path: Path, config: ProcessConfig) -> subprocess.Popen:
+    cmd = [
+        str(ffmpeg_path),
+        "-i", config.source,
+        "-vf", "cropdetect",
+        "-an", "-t", "1", "-f", "null","-"
+    ]
+
+    # Launch process
+    process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    
+    return process
+
+def crop_result(process: subprocess.Popen) -> tuple[str, str, str, str]:
+    progress_pattern = re.compile(r"crop=\s*(\d+:\d+:\d+\:\d+)")
+
+    while True:
+        line = process.stderr.readline()
+        if not line:
+            break
+        line = line.strip()
+
+        # Show errors
+        if "Error" in line or "Invalid" in line or "failed" in line.lower():
+            print(f"[bold red]Error:[/bold red] {line}")
+
+        # Match progress line
+        match = progress_pattern.search(line)
+        if match:
+            crop = match.groups()
+            
+            print(f"crop: {crop}")
