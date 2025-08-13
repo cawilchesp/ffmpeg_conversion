@@ -140,13 +140,6 @@ def monitor_table(frame: str, fps: str, timestamp: str, speed: str) -> Table:
         
     return table
 
-
-def crop_video(ffmpeg_path: Path, config: ProcessConfig) -> subprocess.Popen:
-    # Build output path
-    output_path = Path(config.source).with_stem(f"{Path(config.source).stem}_FFMPEG_EDITED.mp4")
-    return None
-
-
 def crop_detect(ffmpeg_path: Path, config: ProcessConfig) -> subprocess.Popen:
     cmd = [
         str(ffmpeg_path),
@@ -176,6 +169,19 @@ def crop_result(process: subprocess.Popen) -> tuple[str, str, str, str]:
         # Match progress line
         match = progress_pattern.search(line)
         if match:
-            crop = match.groups()
-            
-            print(f"crop: {crop}")
+            width, height, x, y = match.groups()[0].split(':')
+
+            return (width, height, x, y)
+        
+def crop_video(ffmpeg_path: Path, config: ProcessConfig) -> subprocess.Popen:
+    # Build output path
+    output_path = Path(config.source).with_stem(f"{Path(config.source).stem}_FFMPEG_EDITED.mp4")
+    
+    cmd = [
+        str(ffmpeg_path),
+        "-i", config.source,
+        "-vf", "cropdetect",
+        "-an", "-t", "1", "-f", "null","-"
+    ]
+    
+    return None
