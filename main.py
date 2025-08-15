@@ -50,7 +50,6 @@ def main(config: ProcessConfig) -> None:
     step_message(str(next(step_count)), "Video Source :white_check_mark:")
     source_message(video_info=video_info)
 
-
     if config.crop_detect:
         process = crop_detect(ffmpeg_path=ffmpeg_path, config=config)
         crop_area = crop_result(process)
@@ -61,7 +60,6 @@ def main(config: ProcessConfig) -> None:
         step_message(next(step_count), 'Crop area detected ✅')
         
         process = crop_video(ffmpeg_path=ffmpeg_path, config=config, crop_area=crop_area)
-        
     else:
         step_message(next(step_count), 'Conversion Started ✅')
         
