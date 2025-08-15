@@ -22,7 +22,7 @@ def parse_arguments() -> argparse.Namespace:
     """
     parser = argparse.ArgumentParser(description="Video conversion tool using FFMPEG")
     parser.add_argument('--source', type=str, required=True, help='video source')
-    parser.add_argument('--ffmpeg', type=str, default='bin/ffmpeg.exe', help='ffmpeg path')
+    parser.add_argument('--ffmpeg', type=str, default='ffmpeg/bin/ffmpeg.exe', help='ffmpeg path')
     parser.add_argument('--bitrate', type=str, nargs='?', const='3', default=False, help='bitrate in Mbps')
     parser.add_argument('--resolution', type=str, nargs='?', const='1920:1080', default=False, help='video resolution')
     parser.add_argument('--fps', type=str, nargs='?', const='30', default=False, help='video fps')
@@ -35,7 +35,7 @@ def main(config: ProcessConfig) -> None:
     # Initialize process counter
     step_count = itertools.count(1)
 
-    ffmpeg_path = Path("ffmpeg/bin/ffmpeg.exe")
+    ffmpeg_path = Path(config.ffmpeg_path)
 
     if not ffmpeg_path.exists():
         raise IOError("FFmpeg not found in specified path ❌")
