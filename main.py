@@ -1,7 +1,6 @@
 import argparse
 import itertools
 from pathlib import Path
-from rich.live import Live
 
 # Local modules
 from modules.process_config import ProcessConfig, create_config
@@ -9,14 +8,11 @@ from modules.ffmpeg_processing import (load_video_info,
                                         process_video,
                                         monitor_process,
                                         crop_detect,
-                                        crop_result)
+                                        crop_result,
+                                        crop_video)
 
 # Local tools
-from tools.messages import step_message, source_message, progress_table
-
-
-# For debugging
-from icecream import ic
+from tools.messages import step_message, source_message
 
 
 def parse_arguments() -> argparse.Namespace:
@@ -57,28 +53,30 @@ def main(config: ProcessConfig) -> None:
 
     if config.crop_detect:
         process = crop_detect(ffmpeg_path=ffmpeg_path, config=config)
-        width, height, x, y = crop_result(process)
+        crop_area = crop_result(process)
 
-        if x == '0' and y == '0':
+        if crop_area[2] == '0' and crop_area[3] == '0':
             step_message(next(step_count), 'Crop area not detected ❌')
             return
-
-        # Ejecutar el comando
-        step_message(next(step_count), 'Detección de Área de Cortado Iniciado ✅')
+        step_message(next(step_count), 'Crop area detected ✅')
+        
+        process = crop_video(ffmpeg_path=ffmpeg_path, config=config, crop_area=crop_area)
+        
     else:
         step_message(next(step_count), 'Conversion Started ✅')
         
         process = process_video(ffmpeg_path=ffmpeg_path, config=config)
-        monitor_process(process)
-        
-        # Wait for process to finish
-        process.wait()
+    
+    monitor_process(process)
+    
+    # Wait for process to finish
+    process.wait()
 
-        # Final message
-        if process.returncode == 0:
-            step_message(next(step_count), 'Video processed successfully! ✅')
-        else:
-            step_message(next(step_count), "Error processing video: ❌")
+    # Final message
+    if process.returncode == 0:
+        step_message(next(step_count), 'Video processed successfully! ✅')
+    else:
+        step_message(next(step_count), "Error processing video: ❌")
     
 
 if __name__ == "__main__":
