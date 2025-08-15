@@ -11,7 +11,7 @@
 ## Project Structure
 
 - main.py: Entry point for running the tracker
-- ffmpeg: Folder containing FFMPEG. Its path can be customized with parameter `--ffmpeg`.
+- ffmpeg: Folder containing FFMPEG for Windows. Its path can be customized with parameter `--ffmpeg`.
 - modules/
     - process_config.py: Configuration processing.
     - ffmpeg_processing.py: Video conversion and cropping processing.
