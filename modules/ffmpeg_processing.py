@@ -173,15 +173,19 @@ def crop_result(process: subprocess.Popen) -> tuple[str, str, str, str]:
 
             return (width, height, x, y)
         
-def crop_video(ffmpeg_path: Path, config: ProcessConfig) -> subprocess.Popen:
+def crop_video(ffmpeg_path: Path, config: ProcessConfig, crop_area: tuple) -> subprocess.Popen:
     # Build output path
-    output_path = Path(config.source).with_stem(f"{Path(config.source).stem}_FFMPEG_EDITED.mp4")
-    
+    output_path = Path(config.source).with_stem(f"{Path(config.source).stem}_FFMPEG_CROPPED.mp4")
+    width, height, x, y = crop_area
     cmd = [
         str(ffmpeg_path),
         "-i", config.source,
-        "-vf", "cropdetect",
-        "-an", "-t", "1", "-f", "null","-"
+        "-c:v", "h264_nvenc",
+        "-vf", f"crop={width}:{height}:{x}:{y}",
+        f"{output_path}"
     ]
+
+    # Launch process
+    process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
     
-    return None
+    return process
